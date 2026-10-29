@@ -1,0 +1,78 @@
+name: Daily Shorts
+
+# Runs on GitHub's servers three times a day, so your laptop can stay off.
+# Each run builds and uploads ONE Short: the next script in data/shorts that has
+# not been uploaded yet. Add more JSON files and the queue keeps going.
+
+on:
+  schedule:
+    - cron: "30 3 * * *"    # 09:00 IST
+    - cron: "30 8 * * *"    # 14:00 IST
+    - cron: "30 14 * * *"   # 20:00 IST
+  workflow_dispatch:
+    inputs:
+      privacy:
+        description: "Upload privacy for this run"
+        required: false
+        default: public
+        type: choice
+        options: [private, unlisted, public]
+
+# Needed so the run can commit data/shorts_history.json back to the repo.
+permissions:
+  contents: write
+
+# Two runs must never upload the same script at the same time.
+concurrency:
+  group: daily-shorts
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      # Settings > Secrets and variables > Actions > New repository secret
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # libass needs a real font on disk for the burned-in text.
+      - name: Install caption fonts
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-dejavu-core
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build and upload the next Short
+        run: python shorts.py --next --privacy ${{ inputs.privacy || 'public' }}
+
+      - name: Keep the rendered video for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-video
+          path: output/**/final.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Remember what was uploaded
+        if: always()
+        run: |
+          if [ -z "$(git status --porcelain data/shorts_history.json)" ]; then
+            echo "history unchanged"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "chore: record shorts upload [skip ci]" -- data/shorts_history.json
+          git push

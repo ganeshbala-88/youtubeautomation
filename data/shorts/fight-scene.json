@@ -1,0 +1,11 @@
+{
+  "title": "Fight Scene Test",
+  "description": "A test Short built from my own script JSON. No audio yet.\n\n#action #test #shorts",
+  "tags": ["action", "test", "shorts"],
+  "scenes": [
+    { "image_query": "spartan warrior battle", "duration": 3, "text": "The duel begins" },
+    { "image_query": "medieval knight sword fight", "duration": 3, "text": "Steel meets steel" },
+    { "image_query": "armored soldier charging into battle", "duration": 3, "text": "No retreat" },
+    { "image_query": "battlefield smoke at sunset", "duration": 4, "text": "Only one walks away" }
+  ]
+}

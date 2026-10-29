@@ -1,0 +1,27 @@
+{
+  "title": "How UPI Changed Money in India",
+  "description": "In 2016 India switched on a payments system that now moves more real-time transactions than anywhere else on Earth. This is how UPI actually works.\n\n#upi #india #fintech #economy #shorts",
+  "tags": ["upi", "india", "fintech", "digital payments", "economy", "shorts"],
+  "scenes": [
+    {
+      "image_query": "mobile phone payment city",
+      "text": "In 2016 India switched on a payments system that almost nobody outside the country had heard of. Today it moves more real-time transactions than anywhere else on Earth."
+    },
+    {
+      "image_query": "indian rupee banknotes",
+      "text": "It is called UPI, the Unified Payments Interface. It was built by the National Payments Corporation of India, a non-profit created by the country's own banks."
+    },
+    {
+      "image_query": "digital payment terminal",
+      "text": "The idea was simple. Instead of moving money bank to bank, UPI gives every account one address, so a transfer becomes a single instruction instead of three."
+    },
+    {
+      "image_query": "qr code scanner shop",
+      "text": "It costs the user nothing, works across every bank, and settles in seconds. On card networks merchants pay a fee. On UPI, that fee largely disappeared."
+    },
+    {
+      "image_query": "server room data center",
+      "text": "That is why it scaled. Not because the technology was clever on its own, but because it was cheap, open, and pushed every bank onto the same rails."
+    }
+  ]
+}

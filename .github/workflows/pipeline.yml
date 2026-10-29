@@ -1,0 +1,85 @@
+name: YouTube pipeline
+
+# Runs unattended on a schedule. Monday/Wednesday/Friday at 09:00 UTC.
+# Note: GitHub's scheduler can lag a few minutes, and it disables crons on repos
+# with no activity for 60 days - the manual dispatch below is the escape hatch.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1,3,5"
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Override the topic queue for this run"
+        required: false
+        type: string
+      privacy:
+        description: "Upload privacy for this run"
+        required: false
+        default: private
+        type: choice
+        options: [private, unlisted, public]
+
+# Required so the run can commit data/history.json back to the repo.
+permissions:
+  contents: write
+
+# Two scheduled runs should never fight over the same history file.
+concurrency:
+  group: youtube-pipeline
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      # Repository secrets -> Settings > Secrets and variables > Actions
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # libass needs a real font on disk for the burned-in captions.
+      - name: Install caption fonts
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-dejavu-core
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate and upload
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.topic }}" ]; then ARGS="$ARGS --topic \"${{ inputs.topic }}\""; fi
+          if [ -n "${{ inputs.privacy }}" ]; then ARGS="$ARGS --privacy ${{ inputs.privacy }}"; fi
+          eval python run.py $ARGS
+
+      - name: Keep the rendered video for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-video
+          path: output/**/final.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Persist topic history
+        if: always()
+        run: |
+          if [ -z "$(git status --porcelain data/history.json)" ]; then
+            echo "history unchanged"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "chore: record pipeline run [skip ci]" -- data/history.json
+          git push

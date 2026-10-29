@@ -1,0 +1,8 @@
+# One topic per line. Lines starting with # are ignored.
+# The pipeline takes the first unused topic, then writes it back to history.json
+# so it is never repeated. Add as many as you like.
+How the deep ocean stays pitch black below 1000 meters
+Why the Roman concrete recipe outlasted modern concrete
+What actually happens to your body during sleep debt
+How GPS satellites correct for relativity every single day
+Why some deserts are colder than the poles at night

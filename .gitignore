@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+output/
+temp/
+
+# OAuth material - never commit these
+client_secret*.json
+auth/client_secret*.json
+auth/token.json

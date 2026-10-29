@@ -1,0 +1,85 @@
+# ============================================================
+# YouTube automation pipeline configuration
+# Everything the pipeline does is driven from this file.
+# ============================================================
+
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+  # Ken Burns needs a larger source so the zoom stays sharp.
+  zoom_source_scale: 2
+  # Seconds of breathing room appended to every scene except the last.
+  scene_padding_seconds: 0.35
+  # Optional: path to an .mp3 you own the rights to. null = no music.
+  background_music: null
+  music_volume: 0.08
+  # Roughly how long the finished video should be.
+  target_seconds: 300
+
+script:
+  provider: groq
+  # Tried in order; the first model Groq reports as available is used.
+  # Groq retires model IDs regularly, so this list is the safe knob to turn.
+  models:
+    - llama-3.3-70b-versatile
+    - openai/gpt-oss-120b
+    - openai/gpt-oss-20b
+    - llama-3.1-8b-instant
+  language: English
+  tone: "clear, informative, conversational, no hype"
+  words_per_minute: 150
+  scene_min_seconds: 12
+  scene_max_seconds: 30
+
+voice:
+  name: en-US-GuyNeural
+  rate: "+8%"
+  pitch: "+0Hz"
+  volume: "+0%"
+
+captions:
+  enabled: true
+  font: "DejaVu Sans"
+  font_size: 54
+  margin_v: 90
+  outline: 4
+  max_words_per_cue: 5
+
+visuals:
+  # Keyless sources, tried in order. `card` always succeeds.
+  sources: [wikimedia, picsum, card]
+  card_color: "#101828"
+  card_accent: "#3B82F6"
+
+thumbnail:
+  enabled: true
+
+upload:
+  # private | unlisted | public
+  # Kept private by default so nothing goes live until you decide.
+  privacy: private
+  # 27 = Education, 28 = Science & Technology, 24 = Entertainment
+  category_id: "27"
+  tags: [automation, education, explained]
+  made_for_kids: false
+
+# Vertical format used by shorts.py. YouTube classifies any square or vertical
+# video up to 3 minutes as a Short, so 1080x1920 + a short duration is enough.
+shorts:
+  width: 1080
+  height: 1920
+  fps: 30
+  max_seconds: 180
+  # Used when a scene in the script JSON has no "duration".
+  scene_seconds: 3
+  caption_font_size: 64
+  # Distance from the bottom, so text clears the Shorts UI.
+  caption_margin_v: 480
+  # Speak each scene's "text" with edge-tts (free, no key). Scenes grow if the
+  # narration is longer than the declared duration.
+  voice: true
+  # A track is picked at random from here for every render. Drop royalty-free
+  # files in (YouTube Audio Library, Pixabay) - empty means voice only.
+  music_dir: assets/music
+  music_volume: 0.12

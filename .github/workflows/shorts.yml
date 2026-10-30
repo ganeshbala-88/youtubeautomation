@@ -1,14 +1,13 @@
 name: Daily Shorts
 
-# Runs on GitHub's servers three times a day, so your laptop can stay off.
+# Runs on GitHub's servers twice a day, so your laptop can stay off.
 # Each run builds and uploads ONE Short: the next script in data/shorts that has
 # not been uploaded yet. Add more JSON files and the queue keeps going.
 
 on:
   schedule:
     - cron: "30 3 * * *"    # 09:00 IST
-    - cron: "30 8 * * *"    # 14:00 IST
-    - cron: "30 14 * * *"   # 20:00 IST
+    - cron: "30 13 * * *"   # 19:00 IST
   workflow_dispatch:
     inputs:
       privacy:

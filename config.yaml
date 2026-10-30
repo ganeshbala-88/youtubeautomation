@@ -83,3 +83,18 @@ shorts:
   # files in (YouTube Audio Library, Pixabay) - empty means voice only.
   music_dir: assets/music
   music_volume: 0.12
+
+# Used by `python shorts.py --auto`: a keyless RSS feed supplies the story and
+# Groq (free tier) writes the script. No feed or no GROQ_API_KEY falls back to
+# the hand-written JSON queue in data/shorts.
+auto:
+  # Public RSS feeds, tried in order. Swap in any feed you prefer.
+  feeds:
+    - https://feeds.bbci.co.uk/news/world/rss.xml
+    - https://www.thehindu.com/news/national/feeder/default.rss
+    - https://feeds.feedburner.com/ndtvnews-top-stories
+  # How many headlines to collect before one is chosen.
+  headlines_per_run: 10
+  # Scenes Groq should write, and roughly how many words each one speaks.
+  scene_count: 5
+  words_per_scene: 16

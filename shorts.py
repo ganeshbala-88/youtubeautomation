@@ -1,11 +1,13 @@
-"""Shorts pipeline: your own script JSON -> vertical video with voice and music -> YouTube.
+"""Shorts pipeline: a script JSON -> vertical video with voice and music -> YouTube.
 
     python shorts.py data/shorts/fight-scene.json --dry-run
     python shorts.py data/shorts/fight-scene.json --privacy private
     python shorts.py --next --privacy public     # unattended: next script not yet uploaded
+    python shorts.py --auto --privacy public     # unattended: write from a live news headline
 
-No script generation: the JSON is the whole input. Each scene's `text` is both
-spoken by edge-tts and burned on screen. Music is a random pick from `assets/music`.
+Every scene's `text` is both spoken by edge-tts and burned on screen. Music is a
+random pick from `assets/music`. `--auto` writes a fresh script with Groq from a
+keyless news RSS feed, then falls back to the JSON queue when that is not possible.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src import render, tts, upload, visuals
+from src import auto_script, render, tts, upload, visuals
 from src.config import ROOT, load_config
 from src.script_gen import VideoPlan
 
@@ -34,13 +36,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("script", nargs="?", help="Path to the script JSON.")
     parser.add_argument("--next", action="store_true",
                         help="Ignore `script` and pick the oldest script in data/shorts that has not been uploaded yet.")
+    parser.add_argument("--auto", action="store_true",
+                        help="Write a fresh script from a live news headline, then fall back to the queue.")
     parser.add_argument("--config", help="Path to a config file (default: config.yaml).")
     parser.add_argument("--dry-run", action="store_true", help="Render only; never touch YouTube.")
     parser.add_argument("--privacy", choices=["private", "unlisted", "public"], help="Override upload privacy.")
     parser.add_argument("--keep-temp", action="store_true", help="Keep the intermediate segment files.")
     args = parser.parse_args()
-    if not args.next and not args.script:
-        parser.error("give a script path, or --next to pick one automatically")
+    if not args.next and not args.auto and not args.script:
+        parser.error("give a script path, or --next / --auto to pick one automatically")
     return args
 
 
@@ -89,17 +93,20 @@ def next_script() -> Path | None:
     return None
 
 
-def record_upload(script_path: Path, title: str, video_id: str, privacy: str) -> None:
+def record_upload(script_path: Path, title: str, video_id: str, privacy: str, source: dict | None = None) -> None:
     entries = load_history()
-    entries.append(
-        {
-            "file": script_path.name,
-            "title": title,
-            "video_id": video_id,
-            "privacy": privacy,
-            "uploaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        }
-    )
+    entry = {
+        "file": script_path.name,
+        "title": title,
+        "video_id": video_id,
+        "privacy": privacy,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    if source:
+        # Kept so the next run never writes about the same story twice.
+        entry["headline"] = str(source.get("headline") or "")
+        entry["source_url"] = str(source.get("url") or "")
+    entries.append(entry)
     HISTORY_FILE.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
 
 
@@ -239,14 +246,24 @@ def assemble(
 def main() -> int:
     args = parse_args()
     cfg = shorts_config(load_config(args.config))
+    script_path: Path | None = None
 
-    if args.next:
-        script_path = next_script()
-        if script_path is None:
-            print("[shorts] every script in data/shorts has been uploaded already - add more JSON files")
-            return 0
-    else:
-        script_path = Path(args.script)
+    if args.auto:
+        generated = auto_script.generate(cfg, load_history())
+        if generated is not None:
+            script_path = auto_script.save(generated, SHORTS_DIR)
+        else:
+            print("[auto] falling back to the JSON queue")
+            args.next = True
+
+    if script_path is None:
+        if args.next:
+            script_path = next_script()
+            if script_path is None:
+                print("[shorts] nothing to upload: the queue is empty and auto mode produced no script")
+                return 0
+        else:
+            script_path = Path(args.script)
     print(f"[shorts] script {script_path.name}")
 
     script = load_script(script_path, cfg["shorts"]["scene_seconds"])
@@ -290,7 +307,7 @@ def main() -> int:
         privacy = args.privacy or cfg["upload"]["privacy"]
         video_id = upload.upload(video, plan, cfg, privacy=args.privacy)
         print(f"[upload] https://youtube.com/shorts/{video_id}")
-        record_upload(script_path, title, video_id, privacy)
+        record_upload(script_path, title, video_id, privacy, source=script.get("source"))
 
     if not args.keep_temp:
         for pattern in ("segment_*.mp4", "silent.mp4", "vision.mp4", "voice_*.mp3",

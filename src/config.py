@@ -60,6 +60,16 @@ DEFAULTS: dict[str, Any] = {
         "music_dir": "assets/music",
         "music_volume": 0.12,
     },
+    "auto": {
+        "feeds": [
+            "https://feeds.bbci.co.uk/news/world/rss.xml",
+            "https://www.thehindu.com/news/national/feeder/default.rss",
+            "https://feeds.feedburner.com/ndtvnews-top-stories",
+        ],
+        "headlines_per_run": 10,
+        "scene_count": 5,
+        "words_per_scene": 16,
+    },
 }
 
 

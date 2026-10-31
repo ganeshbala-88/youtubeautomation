@@ -93,6 +93,9 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def require_env(*names: str) -> dict[str, str]:
+    for name in names:
+        status = "SET" if os.environ.get(name) else "MISSING"
+        print(f"[debug] env {name}: {status}")
     missing = [name for name in names if not os.environ.get(name)]
     if missing:
         raise SystemExit(

@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import random
 import sys
 import time
@@ -246,6 +247,10 @@ def assemble(
 def main() -> int:
     args = parse_args()
     cfg = shorts_config(load_config(args.config))
+
+    groq_status = "SET" if os.environ.get("GROQ_API_KEY") else "MISSING"
+    print(f"[debug] env GROQ_API_KEY: {groq_status}")
+
     script_path: Path | None = None
 
     if args.auto:

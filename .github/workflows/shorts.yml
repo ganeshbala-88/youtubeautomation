@@ -71,7 +71,11 @@ jobs:
       - name: Remember what was uploaded
         if: always()
         run: |
-          if [ -z "$(git status --porcelain data/shorts_history.json)" ]; then
+          if [ ! -f data/shorts_history.json ]; then
+            echo "history unchanged"
+            exit 0
+          fi
+          if [ -z "$(git status --porcelain -- data/shorts_history.json)" ]; then
             echo "history unchanged"
             exit 0
           fi

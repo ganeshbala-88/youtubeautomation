@@ -75,7 +75,11 @@ jobs:
       - name: Persist topic history
         if: always()
         run: |
-          if [ -z "$(git status --porcelain data/history.json)" ]; then
+          if [ ! -f data/history.json ]; then
+            echo "history unchanged"
+            exit 0
+          fi
+          if [ -z "$(git status --porcelain -- data/history.json)" ]; then
             echo "history unchanged"
             exit 0
           fi

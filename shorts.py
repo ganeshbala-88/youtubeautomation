@@ -25,6 +25,7 @@ from pathlib import Path
 from src import auto_script, render, tts, upload, visuals
 from src.config import ROOT, load_config
 from src.script_gen import VideoPlan
+from edge_tts.exceptions import NoAudioReceived
 
 OUTPUT_DIR = ROOT / "output"
 SHORTS_DIR = ROOT / "data" / "shorts"
@@ -156,7 +157,13 @@ def build_voice(scenes: list[dict], workdir: Path, cfg: dict) -> list[Path]:
             continue
 
         mp3 = workdir / f"voice_{index:03d}.mp3"
-        tts.synthesize(text, mp3, cfg["voice"])
+        try:
+            tts.synthesize(text, mp3, cfg["voice"])
+        except (NoAudioReceived, RuntimeError) as exc:
+            print(f"[voice {index + 1}/{len(scenes)}] TTS failed ({exc}); using silence")
+            render.silence_wav(out_wav, scene["duration"])
+            parts.append(out_wav)
+            continue
         raw = workdir / f"voice_{index:03d}_raw.wav"
         natural = render.normalize_audio(mp3, raw, 0.0)
         if natural + margin > scene["duration"]:

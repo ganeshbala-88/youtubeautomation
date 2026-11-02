@@ -18,6 +18,7 @@ from pathlib import Path
 
 from src import render, script_gen, state, tts, upload, visuals
 from src.config import ROOT, load_config
+from edge_tts.exceptions import NoAudioReceived
 
 OUTPUT_DIR = ROOT / "output"
 
@@ -47,8 +48,12 @@ def build_scenes(plan, workdir: Path, cfg: dict) -> list[dict]:
         print(f"[scene {index + 1}/{len(plan.scenes)}] {scene.image_query}")
 
         mp3 = workdir / f"audio_{index:03d}.mp3"
-        words = tts.synthesize(scene.narration, mp3, cfg["voice"])
-
+        try:
+            words = tts.synthesize(scene.narration, mp3, cfg["voice"])
+        except (NoAudioReceived, RuntimeError) as exc:
+            print(f"[scene {index + 1}/{len(plan.scenes)}] TTS failed ({exc}); using silence")
+            words = []
+        
         wav = workdir / f"audio_{index:03d}.wav"
         duration = render.normalize_audio(mp3, wav, padding)
         if not words:

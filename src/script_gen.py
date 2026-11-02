@@ -86,6 +86,33 @@ def _resolve_model(client, candidates: list[str]) -> str:
     )
 
 
+def _create_json_completion(client, model: str, prompt: str, temperature: float = 0.8):
+    """Create a chat completion expecting JSON output.
+
+    Some models (e.g. openai/gpt-oss-*) don't support response_format, so fall
+    back to plain text and let _parse_plan extract the JSON from the response.
+    """
+    from groq import BadRequestError
+
+    base_messages = [
+        {"role": "system", "content": "You respond with valid JSON only."},
+        {"role": "user", "content": prompt},
+    ]
+    try:
+        return client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            response_format={"type": "json_object"},
+            messages=base_messages,
+        )
+    except BadRequestError:
+        return client.chat.completions.create(
+            model=model,
+            temperature=temperature,
+            messages=base_messages,
+        )
+
+
 def _scene_count(cfg: dict[str, Any]) -> int:
     video = cfg["video"]
     script = cfg["script"]
@@ -118,15 +145,7 @@ def generate(topic: str, cfg: dict[str, Any], offline: bool = False) -> VideoPla
         wpm=script_cfg["words_per_minute"],
     )
 
-    response = client.chat.completions.create(
-        model=model,
-        temperature=0.8,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": "You respond with valid JSON only."},
-            {"role": "user", "content": prompt},
-        ],
-    )
+    response = _create_json_completion(client, model, prompt, temperature=0.8)
     payload = _parse_plan(response.choices[0].message.content or "")
 
     scenes = [

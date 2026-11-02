@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src import news
-from src.script_gen import _parse_plan, _resolve_model
+from src.script_gen import _create_json_completion, _parse_plan, _resolve_model
 
 PROMPT = """You write 30-45 second YouTube Shorts for a facts-first news channel.
 
@@ -101,15 +101,7 @@ def generate(cfg: dict, history: list[dict]) -> dict | None:
         scene_count=auto["scene_count"],
         words_per_scene=auto["words_per_scene"],
     )
-    response = client.chat.completions.create(
-        model=model,
-        temperature=0.6,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": "You respond with valid JSON only."},
-            {"role": "user", "content": prompt},
-        ],
-    )
+    response = _create_json_completion(client, model, prompt, temperature=0.6)
     try:
         payload = _parse_plan(response.choices[0].message.content or "")
     except json.JSONDecodeError:

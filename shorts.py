@@ -17,15 +17,36 @@ import copy
 import json
 import os
 import random
+import smtplib
 import sys
 import time
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from pathlib import Path
 
 from src import auto_script, render, tts, upload, visuals
 from src.config import ROOT, load_config
 from src.script_gen import VideoPlan
 from edge_tts.exceptions import NoAudioReceived
+
+
+def notify_error(message: str) -> None:
+    """Email alert on pipeline failure; silently skips if mailing not configured."""
+    try:
+        user = os.environ.get("ALERT_EMAIL_USER")
+        pw = os.environ.get("ALERT_EMAIL_PASS")
+        if not user or not pw:
+            return
+        msg = EmailMessage()
+        msg["Subject"] = "YouTube Automation Failed"
+        msg["From"] = user
+        msg["To"] = "ganipinjala@gmail.com"
+        msg.set_content(str(message))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(user, pw)
+            server.send_message(msg)
+    except Exception:
+        pass
 
 OUTPUT_DIR = ROOT / "output"
 SHORTS_DIR = ROOT / "data" / "shorts"
@@ -332,4 +353,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:
+        notify_error(str(exc))
+        raise

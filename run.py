@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
+import smtplib
 import sys
 import time
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from pathlib import Path
 
 from src import render, script_gen, state, tts, upload, visuals
@@ -67,6 +70,25 @@ def build_scenes(plan, workdir: Path, cfg: dict) -> list[dict]:
             {"image": image, "audio": wav, "duration": duration, "words": words, "visual_source": source}
         )
     return scenes
+
+
+def notify_error(message: str) -> None:
+    """Email alert on pipeline failure; silently skips if mailing not configured."""
+    try:
+        user = os.environ.get("ALERT_EMAIL_USER")
+        pw = os.environ.get("ALERT_EMAIL_PASS")
+        if not user or not pw:
+            return
+        msg = EmailMessage()
+        msg["Subject"] = "YouTube Automation Failed"
+        msg["From"] = user
+        msg["To"] = "ganipinjala@gmail.com"
+        msg.set_content(str(message))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(user, pw)
+            server.send_message(msg)
+    except Exception:
+        pass
 
 
 def main() -> int:
@@ -128,4 +150,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:
+        notify_error(str(exc))
+        raise
